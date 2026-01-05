@@ -95,7 +95,7 @@ export async function detectGender(
       const avgRms = rmsValues.reduce((a, b) => a + b, 0) / rmsValues.length;
 
       // updated threshold
-      return avgRms < -12.5 ? "female" : "male";
+      return avgRms < -12 ? "female" : "male";
     }
 
     return "male";
@@ -106,7 +106,6 @@ export async function detectGender(
 }
 
 function assignVoice(gender: "male" | "female", index: number) {
-  console.log("jkhjkhk", gender);
   if (gender === "male") {
     return maleVoices[index % maleVoices.length];
   } else {
