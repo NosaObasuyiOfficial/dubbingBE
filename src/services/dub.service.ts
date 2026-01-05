@@ -2,7 +2,7 @@ import fs from "fs";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { tempFile, safeUnlink } from "../utils/temp";
-// import { ffmpegPath, isFfmpegAvailable } from "node-av";
+import ffmpegStatic from "ffmpeg-static";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { progressMap, outputMap } from "../utils/progress";
@@ -16,12 +16,17 @@ const execFileAsync = promisify(execFile);
 const maleVoices = ["onyx", "nova", "shimmer", "ballad"];
 const femaleVoices = ["alloy", "verse", "fable", "coral"];
 
-const FFMPEG = process.env.FFMPEG_PATH! || "ffmpeg";
+
+if (!ffmpegStatic) {
+  throw new Error("FFmpeg binary not found");
+}
+
+const FFMPEG_PATH = ffmpegStatic;
 
 
 /* ---------- helpers ---------- */
 async function extractAudio(input: string, output: string) {
-  await execFileAsync(FFMPEG, [
+  await execFileAsync(FFMPEG_PATH, [
     "-i",
     input,
     "-map",
@@ -34,7 +39,7 @@ async function extractAudio(input: string, output: string) {
 
 async function createSilence(seconds: number, output: string) {
   if (seconds <= 0) return;
-  await execFileAsync(FFMPEG, [
+  await execFileAsync(FFMPEG_PATH, [
     "-f",
     "lavfi",
     "-i",
@@ -72,7 +77,7 @@ export async function detectGender(
 ): Promise<"male" | "female"> {
   try {
     // Use FFmpeg astats via node-av path
-    const { stderr } = await execFileAsync(FFMPEG, [
+    const { stderr } = await execFileAsync(FFMPEG_PATH, [
       "-i",
       audioFile,
       "-af",
@@ -135,7 +140,7 @@ async function concatAudio(files: string[], output: string) {
   const list = tempFile(".txt");
   fs.writeFileSync(list, files.map((f) => `file '${f}'`).join("\n"));
 
-  await execFileAsync(FFMPEG, [
+  await execFileAsync(FFMPEG_PATH, [
     "-f",
     "concat",
     "-safe",
@@ -196,7 +201,7 @@ export async function dubVideo(inputPath: string, jobId: string) {
     if (!speakerGender[speakerKey]) {
       // extract audio for segment only
       const segmentAudio = tempFile(".wav");
-      await execFileAsync(FFMPEG, [
+      await execFileAsync(FFMPEG_PATH, [
         "-i",
         extractedAudio,
         "-ss",
@@ -240,7 +245,7 @@ export async function dubVideo(inputPath: string, jobId: string) {
 
   // BACKGROUND AUDIO PRESERVED
   progressMap.set(jobId, 90);
-  await execFileAsync(FFMPEG, [
+  await execFileAsync(FFMPEG_PATH, [
     "-i",
     inputPath,
     "-i",
@@ -264,7 +269,6 @@ export async function dubVideo(inputPath: string, jobId: string) {
   safeUnlink(dubbedAudio);
   timeline.forEach(safeUnlink);
 }
-
 
 // import fs from "fs";
 // import OpenAI from "openai";
